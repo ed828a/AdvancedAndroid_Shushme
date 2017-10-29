@@ -20,6 +20,8 @@ import android.Manifest;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -37,12 +39,19 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
 import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceBuffer;
 import com.google.android.gms.location.places.Places;
 import com.google.android.gms.location.places.ui.PlacePicker;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+
+import static com.example.android.shushme.provider.PlaceContract.PlaceEntry.COLUMN_PLACE_ID;
 
 public class MainActivity extends AppCompatActivity
         implements GoogleApiClient.ConnectionCallbacks,
@@ -56,6 +65,7 @@ public class MainActivity extends AppCompatActivity
     // Member variables
     private PlaceListAdapter mAdapter;
     private RecyclerView mRecyclerView;
+    GoogleApiClient mGoogleApiClient;
 
     /**
      * Called when the activity is starting
@@ -70,10 +80,10 @@ public class MainActivity extends AppCompatActivity
         // Set up the recycler view
         mRecyclerView = (RecyclerView) findViewById(R.id.places_list_recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mAdapter = new PlaceListAdapter(this);
+        mAdapter = new PlaceListAdapter(this, null);
         mRecyclerView.setAdapter(mAdapter);
 
-        GoogleApiClient client = new GoogleApiClient.Builder(this)
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .addApi(LocationServices.API)
@@ -86,6 +96,8 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         Log.i(TAG, "API Client Connection Successful!");
+
+        refreshPlaceData();
     }
 
     @Override
@@ -139,8 +151,10 @@ public class MainActivity extends AppCompatActivity
 
             // insert placeID into the database
             ContentValues contentValues = new ContentValues();
-            contentValues.put(PlaceContract.PlaceEntry.COLUMN_PLACE_ID, placeID);
+            contentValues.put(COLUMN_PLACE_ID, placeID);
             getContentResolver().insert(PlaceContract.PlaceEntry.CONTENT_URI, contentValues);
+
+            refreshPlaceData();
         }
 
     }
@@ -164,5 +178,34 @@ public class MainActivity extends AppCompatActivity
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                 PERMISSIONS_REQUEST_FINE_LOCATION);
+    }
+
+    private void refreshPlaceData(){
+        Uri databaseUri = PlaceContract.PlaceEntry.CONTENT_URI;
+        final Cursor placeIDsCursor = getContentResolver().query(
+                databaseUri,
+                null,
+                null,
+                null,
+                null);
+        if (placeIDsCursor == null || placeIDsCursor.getCount() == 0) {
+            // no place IDs
+            return;
+        }
+
+        List<String> placeIDsList = new ArrayList<>();
+        while (placeIDsCursor.moveToNext()){
+            placeIDsList.add(placeIDsCursor.getString(placeIDsCursor.getColumnIndex(COLUMN_PLACE_ID)));
+        }
+        PendingResult<PlaceBuffer> placesBufferResult =
+                Places.GeoDataApi.getPlaceById(mGoogleApiClient,
+                placeIDsList.toArray(new String[placeIDsList.size()])); /* or placeIDsList.toArray() */
+
+        placesBufferResult.setResultCallback(new ResultCallback<PlaceBuffer>() {
+            @Override
+            public void onResult(@NonNull PlaceBuffer places) {
+               mAdapter.swapPlaces(places);
+            }
+        });
     }
 }

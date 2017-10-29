@@ -18,22 +18,30 @@ package com.example.android.shushme;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.PlaceBuffer;
+
 public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.PlaceViewHolder> {
 
+    private static final String LOG_TAG = PlaceListAdapter.class.getSimpleName();
+
     private Context mContext;
+    private PlaceBuffer mPlaces;
 
     /**
      * Constructor using the context and the db cursor
      *
      * @param context the calling context/activity
      */
-    public PlaceListAdapter(Context context) {
+    public PlaceListAdapter(Context context, PlaceBuffer places) {
         this.mContext = context;
+        this.mPlaces = places;
     }
 
     /**
@@ -59,10 +67,24 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
      */
     @Override
     public void onBindViewHolder(PlaceViewHolder holder, int position) {
+        String name = mPlaces.get(position).getName().toString();
+        String address = mPlaces.get(position).getAddress().toString();
 
+        Log.v(LOG_TAG, "Place name: " + name);
+        Log.v(LOG_TAG, "Place address: " + address);
+
+        holder.nameTextView.setText(name);
+        holder.addressTextView.setText(address);
     }
 
+    public void swapPlaces(PlaceBuffer places){
+        mPlaces = places;
+        if (mPlaces != null){
+            // to inform RecyclerView to update the displayed contents
+            this.notifyDataSetChanged();
+        }
 
+    }
     /**
      * Returns the number of items in the cursor
      *
@@ -70,7 +92,11 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
      */
     @Override
     public int getItemCount() {
-        return 0;
+        if (mPlaces == null) {
+            return 0;
+        } else {
+            return  mPlaces.getCount();
+        }
     }
 
     /**
