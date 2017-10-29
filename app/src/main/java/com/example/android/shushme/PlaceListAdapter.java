@@ -23,18 +23,22 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.google.android.gms.location.places.PlaceBuffer;
+
 public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.PlaceViewHolder> {
 
     private Context mContext;
+    PlaceBuffer mPlaces;
 
     /**
      * Constructor using the context and the db cursor
      *
      * @param context the calling context/activity
      */
-    public PlaceListAdapter(Context context) {
+    public PlaceListAdapter(Context context, PlaceBuffer places) {
         // TODO (4) Take a PlaceBuffer as an input and store it as a local private member mPlaces
         this.mContext = context;
+        mPlaces = places;
     }
 
     /**
@@ -62,10 +66,20 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     public void onBindViewHolder(PlaceViewHolder holder, int position) {
         // TODO (6) Implement onBindViewHolder to set the view holder's Name and Address text fields
         // from the Place object at the specified position in mPlaces
+        String name = mPlaces.get(position).getName().toString();
+        String address = mPlaces.get(position).getAddress().toString();
+        holder.nameTextView.setText(name);
+        holder.addressTextView.setText(address);
     }
 
     //TODO (7) Implement a public method swapPlaces that replaces the current mPlaces PlaceBuffer with a new one
-
+    public void swapPlaces(PlaceBuffer newPlaces){
+        mPlaces = newPlaces;
+        if ( mPlaces != null){
+            // Force the RecyclerView to refresh
+            this.notifyDataSetChanged();
+        }
+    }
     /**
      * Returns the number of items in the cursor
      *
@@ -74,8 +88,13 @@ public class PlaceListAdapter extends RecyclerView.Adapter<PlaceListAdapter.Plac
     @Override
     public int getItemCount() {
         // TODO (5) Update getItemCount to return mPlaces's item count
-        return 0;
+        if (mPlaces == null) {
+            return 0;
+        } else {
+            return  mPlaces.getCount();
+        }
     }
+
 
     /**
      * PlaceViewHolder class for the recycler view item
