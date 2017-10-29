@@ -60,7 +60,7 @@ public class Geofencing implements ResultCallback {
         }
     }
 
-    public void unregisterAllGeogences() {
+    public void unregisterAllGeofences() {
         if (mGoogleApiClient == null || !mGoogleApiClient.isConnected()) {
             return;
         }

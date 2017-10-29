@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity
                 editor.commit();
 
                 if (isChecked) mGeofencing.registerAllGeofences();
-                else  mGeofencing.unregisterAllGeogences();
+                else  mGeofencing.unregisterAllGeofences();
             }
         });
 
