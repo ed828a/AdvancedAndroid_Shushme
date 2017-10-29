@@ -31,11 +31,12 @@ public class GeofenceBroadcastReceiver extends BroadcastReceiver {
         Log.i(LOG_TAG, "OnReceive called");
 
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
+        if (geofencingEvent.hasError()){
+            Log.e(LOG_TAG, String.format("Error code: %d", geofencingEvent.getErrorCode()));
+            return;
+        }
         // get the transition type
         int geofenceTransition = geofencingEvent.getGeofenceTransition();
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-            setRingerMode(context, AudioManager.RINGER_MODE_SILENT);
-        }
         switch (geofenceTransition) {
             case Geofence.GEOFENCE_TRANSITION_ENTER:
                 setRingerMode(context, AudioManager.RINGER_MODE_SILENT);

@@ -144,7 +144,7 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
-        Toast.makeText(this, R.string.location_granted_message, Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.location_permission_granted_message, Toast.LENGTH_SHORT).show();
 
         try {
             PlacePicker.IntentBuilder intentBuilder = new PlacePicker.IntentBuilder();
@@ -210,7 +210,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void onLocationPermissionClicked(View view) {
-        Toast.makeText(this, R.string.location_granted_message, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, R.string.location_permission_granted_message, Toast.LENGTH_LONG).show();
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                 PERMISSIONS_REQUEST_FINE_LOCATION);
