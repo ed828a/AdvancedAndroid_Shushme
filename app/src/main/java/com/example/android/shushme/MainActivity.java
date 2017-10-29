@@ -17,12 +17,16 @@ package com.example.android.shushme;
 */
 
 import android.Manifest;
+import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -32,6 +36,8 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.example.android.shushme.provider.PlaceContract;
@@ -65,7 +71,9 @@ public class MainActivity extends AppCompatActivity
     // Member variables
     private PlaceListAdapter mAdapter;
     private RecyclerView mRecyclerView;
-    GoogleApiClient mGoogleApiClient;
+    private GoogleApiClient mGoogleApiClient;
+    private Geofencing mGeofencing;
+    private boolean mIsEnabled;
 
     /**
      * Called when the activity is starting
@@ -83,6 +91,24 @@ public class MainActivity extends AppCompatActivity
         mAdapter = new PlaceListAdapter(this, null);
         mRecyclerView.setAdapter(mAdapter);
 
+        // Initialize the switch state and handle enable/disable switch change
+        Switch onOffSwitch = (Switch) findViewById(R.id.enable_switch);
+        mIsEnabled = getPreferences(MODE_PRIVATE).getBoolean(getString(R.string.setting_enabled), false);
+        onOffSwitch.setChecked(mIsEnabled);
+        onOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mIsEnabled = isChecked;
+
+                SharedPreferences.Editor editor = getPreferences(MODE_PRIVATE).edit();
+                editor.putBoolean(getString(R.string.setting_enabled), isChecked);
+                editor.commit();
+
+                if (isChecked) mGeofencing.registerAllGeofences();
+                else  mGeofencing.unregisterAllGeogences();
+            }
+        });
+
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
@@ -91,6 +117,7 @@ public class MainActivity extends AppCompatActivity
                 .enableAutoManage(this, this)
                 .build();
 
+        mGeofencing = new Geofencing(this, mGoogleApiClient);
     }
 
     @Override
@@ -171,13 +198,27 @@ public class MainActivity extends AppCompatActivity
             locationPermission.setChecked(true);
             locationPermission.setEnabled(false);
         }
+
+        CheckBox ringerPermission = (CheckBox) findViewById(R.id.ringer_permission_checkbox);
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= 24 && !notificationManager.isNotificationPolicyAccessGranted()){
+            ringerPermission.setChecked(false);
+        } else {
+            ringerPermission.setChecked(true);
+            ringerPermission.setEnabled(false);
+        }
     }
 
-    public void onLocationPermissionClicked() {
+    public void onLocationPermissionClicked(View view) {
         Toast.makeText(this, R.string.location_granted_message, Toast.LENGTH_LONG).show();
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                 PERMISSIONS_REQUEST_FINE_LOCATION);
+    }
+
+    public void onRingerPermissionClicked(View view){
+        Intent intent = new Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS);
+        startActivity(intent);
     }
 
     private void refreshPlaceData(){
@@ -205,6 +246,8 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onResult(@NonNull PlaceBuffer places) {
                mAdapter.swapPlaces(places);
+               mGeofencing.updateGeofencesList(places);
+               if (mIsEnabled) mGeofencing.registerAllGeofences();
             }
         });
     }
